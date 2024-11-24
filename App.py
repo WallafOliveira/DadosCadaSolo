@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 import sqlite3
-from werkzeug.security import generate_password_hash, check_password_hash
 import os
 from flask_cors import CORS
 
@@ -39,15 +38,12 @@ def criar_usuario():
         email = novo_usuario['email']
         senha = novo_usuario['senha']  # A senha será recebida em texto simples
 
-        # Gerar o hash da senha antes de salvar no banco de dados
-        senha_hash = generate_password_hash(senha)
-
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
             # Inserir o usuário no banco de dados
             cursor.execute("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)", 
-                           (nome, email, senha_hash))
+                           (nome, email, senha))
             conn.commit()
 
         return jsonify({"message": "Usuário criado com sucesso!"}), 201
@@ -78,8 +74,8 @@ def login_usuario():
 
             senha_armazenada = resultado['senha']
 
-            # Verifica se a senha fornecida é igual à armazenada no banco (comparação com hash)
-            if not check_password_hash(senha_armazenada, senha):
+            # Verifica se a senha fornecida é igual à armazenada no banco
+            if senha_armazenada != senha:
                 return jsonify({'error': 'Senha incorreta'}), 401
 
             return jsonify({'message': 'Login bem-sucedido!'}), 200
