@@ -5,12 +5,7 @@ import os
 from flask_cors import CORS
 
 app = Flask(__name__)
-
-# Permitir apenas o domínio específico e garantir que o método OPTIONS e os cabeçalhos necessários sejam aceitos
 CORS(app)
-
-
-# Resto do código...
 
 # Caminho para o banco de dados SQLite
 db_path = "meu_banco.db"
@@ -25,7 +20,7 @@ def get_db_connection():
 def init_db():
     with get_db_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute('''
+        cursor.execute(''' 
             CREATE TABLE IF NOT EXISTS usuarios (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
@@ -34,12 +29,6 @@ def init_db():
             )
         ''')
         conn.commit()
-
-
-
-@app.route('/')
-def home():
-    return jsonify({"message": "API funcionando corretamente!"})
 
 # Endpoint para cadastrar um novo usuário
 @app.route('/usuarios', methods=['POST'])
@@ -99,8 +88,7 @@ def login_usuario():
         print(f"Erro inesperado: {e}")
         return jsonify({'error': 'Erro inesperado no servidor'}), 500
 
+# Inicializar a aplicação
 if __name__ == '__main__':
-    # Inicializa o banco de dados antes de iniciar o servidor
     init_db()
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
