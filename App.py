@@ -28,32 +28,6 @@ def init_db():
                 senha TEXT NOT NULL
             )
         ''')
-        
-        cursor.execute(''' 
-            CREATE TABLE IF NOT EXISTS solo (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ph REAL,
-                umidade REAL,
-                temperatura REAL,
-                nitrogenio REAL,
-                fosforo REAL,
-                potassio REAL,
-                microbioma REAL,
-                usuario_id INTEGER,
-                FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
-            )
-        ''')
-
-        cursor.execute(''' 
-            CREATE TABLE IF NOT EXISTS condicoes_anormais (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                solo_id INTEGER,
-                parametro TEXT NOT NULL,
-                condicao TEXT NOT NULL,
-                acao TEXT NOT NULL,
-                FOREIGN KEY (solo_id) REFERENCES solo (id)
-            )
-        ''')
         conn.commit()
 
 # Endpoint para cadastrar um novo usuário
@@ -63,12 +37,15 @@ def criar_usuario():
         novo_usuario = request.get_json()
         nome = novo_usuario['nome']
         email = novo_usuario['email']
-        senha = novo_usuario['senha']
+        senha = novo_usuario['senha']  # A senha será recebida em texto simples
 
+        # Gerar o hash da senha antes de salvar no banco de dados
         senha_hash = generate_password_hash(senha)
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
+
+            # Inserir o usuário no banco de dados
             cursor.execute("INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)", 
                            (nome, email, senha_hash))
             conn.commit()
@@ -81,7 +58,7 @@ def criar_usuario():
         print(f"Erro inesperado: {e}")
         return jsonify({'error': 'Erro inesperado no servidor'}), 500
 
-# Endpoint para login de usuário
+# Endpoint para fazer login do usuário
 @app.route('/login', methods=['POST'])
 def login_usuario():
     try:
@@ -91,7 +68,9 @@ def login_usuario():
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT senha, id FROM usuarios WHERE email = ?", (email,))
+
+            # Verifica se o email existe
+            cursor.execute("SELECT senha FROM usuarios WHERE email = ?", (email,))
             resultado = cursor.fetchone()
 
             if resultado is None:
@@ -99,66 +78,15 @@ def login_usuario():
 
             senha_armazenada = resultado['senha']
 
+            # Verifica se a senha fornecida é igual à armazenada no banco (comparação com hash)
             if not check_password_hash(senha_armazenada, senha):
                 return jsonify({'error': 'Senha incorreta'}), 401
 
-            return jsonify({'message': 'Login bem-sucedido!', 'usuario_id': resultado['id']}), 200
+            return jsonify({'message': 'Login bem-sucedido!'}), 200
 
     except Exception as e:
         print(f"Erro inesperado: {e}")
         return jsonify({'error': 'Erro inesperado no servidor'}), 500
-
-# Endpoint para cadastrar dados do solo (relacionados ao usuário)
-@app.route('/api/solo', methods=['POST'])
-def add_solo():
-    try:
-        dados_solo = request.get_json()
-        usuario_id = dados_solo['usuario_id']
-        ph = dados_solo['ph']
-        umidade = dados_solo['umidade']
-        temperatura = dados_solo['temperatura']
-        nitrogenio = dados_solo['nitrogenio']
-        fosforo = dados_solo['fosforo']
-        potassio = dados_solo['potassio']
-        microbioma = dados_solo['microbioma']
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(''' 
-                INSERT INTO solo (ph, umidade, temperatura, nitrogenio, fosforo, potassio, microbioma, usuario_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (ph, umidade, temperatura, nitrogenio, fosforo, potassio, microbioma, usuario_id))
-            conn.commit()
-
-        return jsonify({"message": "Dados do solo inseridos com sucesso!"}), 201
-
-    except Exception as e:
-        print(f"Erro inesperado: {e}")
-        return jsonify({'error': 'Erro ao inserir dados do solo'}), 500
-
-# Endpoint para registrar as condições anormais do solo
-@app.route('/api/condicoes_anormais', methods=['POST'])
-def add_condicoes_anormais():
-    try:
-        condicoes = request.get_json()
-        solo_id = condicoes['solo_id']
-        parametro = condicoes['parametro']
-        condicao = condicoes['condicao']
-        acao = condicoes['acao']
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(''' 
-                INSERT INTO condicoes_anormais (solo_id, parametro, condicao, acao)
-                VALUES (?, ?, ?, ?)
-            ''', (solo_id, parametro, condicao, acao))
-            conn.commit()
-
-        return jsonify({"message": "Condição anormal registrada com sucesso!"}), 201
-
-    except Exception as e:
-        print(f"Erro inesperado: {e}")
-        return jsonify({'error': 'Erro ao registrar condição anormal'}), 500
 
 # Inicializar a aplicação
 if __name__ == '__main__':
